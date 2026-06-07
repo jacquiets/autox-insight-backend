@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     ALLOWED_ORIGINS: list[str] | str = [
         "http://localhost:5173",  # Vite por defecto
         "http://localhost:3000",  # React/Next por defecto
+        "http://localhost:8080"
     ]
 
     @field_validator("ALLOWED_ORIGINS", mode="before")
