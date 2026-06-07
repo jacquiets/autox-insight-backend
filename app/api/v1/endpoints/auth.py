@@ -37,8 +37,8 @@ async def login(
         key=AUTH_COOKIE_NAME,
         value=access_token,
         httponly=True,       # JavaScript no puede acceder a esta cookie
-        secure=True,         # Solo HTTPS (en desarrollo local se puede poner False)
-        samesite="lax",      # Protección básica contra CSRF
+        secure=True,         # Solo HTTPS (en desarrollo local se puede poner False, pero debe ser True para SameSite=none)
+        samesite="none",     # "none" permite enviar la cookie en peticiones cross-site (ej. Railway subdomains)
         max_age=60 * 60 * 8, # Expiración: 8 horas (en segundos)
         path="/",
     )
