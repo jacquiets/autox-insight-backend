@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from app.api.v1.endpoints import auth, work_orders, ml
+from app.api.v1.endpoints import auth, work_orders, ml, vehicles, parts
 
 api_router = APIRouter()
 
@@ -8,6 +8,8 @@ api_router = APIRouter()
 api_router.include_router(auth.router, prefix="/auth", tags=["auth"])
 api_router.include_router(work_orders.router, prefix="/work-orders", tags=["work-orders"])
 api_router.include_router(ml.router, prefix="/ml", tags=["prediccion-ml"])
+api_router.include_router(vehicles.router, prefix="/vehicles", tags=["vehicles"])
+api_router.include_router(parts.router, prefix="/parts", tags=["parts"])
 
 # Agrega aquí futuros routers:
 # from app.api.v1.endpoints import users, orders
