@@ -45,6 +45,7 @@ async def login(
 
     return LoginResponse(
         message="Sesión iniciada correctamente.",
+        access_token=access_token,
         user=user_public,
     )
 

@@ -17,4 +17,5 @@ class UserPublic(BaseModel):
 
 class LoginResponse(BaseModel):
     message: str
+    access_token: str
     user: UserPublic
