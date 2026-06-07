@@ -7,6 +7,12 @@ class Settings(BaseSettings):
     
     SUPABASE_URL: str = "https://your-project-id.supabase.co"
     SUPABASE_KEY: str = "your-supabase-anon-key"
+    
+    # Orígenes permitidos (frontend)
+    ALLOWED_ORIGINS: list[str] = [
+        "http://localhost:5173",  # Vite por defecto
+        "http://localhost:3000",  # React/Next por defecto
+    ]
 
     model_config = SettingsConfigDict(
         env_file=".env",
