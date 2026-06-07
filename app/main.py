@@ -1,11 +1,24 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
 from app.api.v1.router import api_router
+from app.api.v1.endpoints.ml import load_model
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # ── Startup ──────────────────────────────────────────────────────────────
+    load_model()   # Carga ml/model.pkl en RAM al arrancar Railway
+    yield
+    # ── Shutdown ─────────────────────────────────────────────────────────────
+
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
+    lifespan=lifespan,
     openapi_url=f"{settings.API_V1_STR}/openapi.json" if settings.DEBUG else None,
     docs_url=f"{settings.API_V1_STR}/docs" if settings.DEBUG else None,
     redoc_url=f"{settings.API_V1_STR}/redoc" if settings.DEBUG else None,
