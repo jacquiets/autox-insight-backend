@@ -1,8 +1,8 @@
-from fastapi import APIRouter, Depends, Response
+from fastapi import APIRouter, Cookie, Depends, HTTPException, Response, status
 from supabase import Client
 
 from app.core.supabase import get_supabase
-from app.schemas.auth import LoginRequest, LoginResponse
+from app.schemas.auth import LoginRequest, LoginResponse, UserPublic
 from app.services.auth import login_user
 
 router = APIRouter()
@@ -60,3 +60,59 @@ async def logout(
     supabase.auth.sign_out()
     response.delete_cookie(key=AUTH_COOKIE_NAME, path="/")
     return {"message": "Sesión cerrada correctamente."}
+
+
+@router.get("/me", response_model=UserPublic, summary="Perfil del usuario autenticado")
+async def get_me(
+    supabase: Client = Depends(get_supabase),
+    autox_access_token: str | None = Cookie(default=None),
+) -> UserPublic:
+    """
+    Verifica la cookie HttpOnly y devuelve el perfil del usuario.
+    Utilizado por el frontend para rehidratar el estado de sesión
+    tras un refresh de página, sin necesidad de localStorage.
+    """
+    if not autox_access_token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="No autenticado.",
+        )
+
+    # Verificar el token con Supabase y obtener el usuario
+    try:
+        user_response = supabase.auth.get_user(autox_access_token)
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Sesión inválida o expirada.",
+        )
+
+    if not user_response or not user_response.user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Sesión inválida o expirada.",
+        )
+
+    user_id = user_response.user.id
+
+    # Obtener el perfil desde la tabla `usuario`
+    profile_response = (
+        supabase.table("usuario")
+        .select("correo_corporativo, nombre_completo, cargo")
+        .eq("id", user_id)
+        .single()
+        .execute()
+    )
+
+    if not profile_response.data:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Perfil de usuario no encontrado.",
+        )
+
+    data = profile_response.data
+    return UserPublic(
+        correo_corporativo=data["correo_corporativo"],
+        nombre_completo=data["nombre_completo"],
+        cargo=data["cargo"],
+    )
