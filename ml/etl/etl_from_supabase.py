@@ -177,7 +177,7 @@ def main():
     print(f"   Cantidad minima: {df_demanda['cantidad_total'].min():.0f}")
     print(f"   Cantidad maxima: {df_demanda['cantidad_total'].max():.0f}")
     print(f"   Cantidad media: {df_demanda['cantidad_total'].mean():.2f}")
-    print(f"\n   Top 5 repuestos mas demandados:")
+    print("\n   Top 5 repuestos mas demandados:")
     top5 = (
         df_demanda.groupby(["producto_id", "descripcion_repuesto"])["cantidad_total"]
         .sum()
