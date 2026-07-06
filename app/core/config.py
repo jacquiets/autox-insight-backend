@@ -1,19 +1,29 @@
 from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+
 class Settings(BaseSettings):
     PROJECT_NAME: str = "FastAPI Supabase Backend"
     DEBUG: bool = True
     API_V1_STR: str = "/api/v1"
-    
+
     SUPABASE_URL: str = "https://your-project-id.supabase.co"
     SUPABASE_KEY: str = "your-supabase-anon-key"
-    
+
+    # Clave de servicio de Supabase (service_role).
+    # Necesaria para operaciones admin como actualizar contraseñas.
+    # NUNCA exponer en el frontend ni en logs.
+    SUPABASE_SERVICE_KEY: str = ""
+
+    # URL pública del frontend (para construir el redirect del email de reseteo).
+    # Ejemplo: https://autox-insight-x.vercel.app
+    FRONTEND_URL: str = "http://localhost:5173"
+
     # Orígenes permitidos (frontend)
     ALLOWED_ORIGINS: list[str] | str = [
         "http://localhost:5173",  # Vite por defecto
         "http://localhost:3000",  # React/Next por defecto
-        "http://localhost:8080"
+        "http://localhost:8080",
     ]
 
     @field_validator("ALLOWED_ORIGINS", mode="before")
@@ -27,7 +37,9 @@ class Settings(BaseSettings):
         env_file=".env",
         env_file_encoding="utf-8",
         case_sensitive=True,
-        extra="ignore"
+        extra="ignore",
     )
 
+
 settings = Settings()
+
