@@ -47,31 +47,35 @@ async def build_smart_purchase_proposals(
       déficit = max(0, demanda_predicha_IA − stock_actual)
       compra_sugerida = déficit ajustado al stock_maximo cuando aplica.
     """
-    # 1. Traer stock + datos del repuesto en un solo query relacional.
-    select_q = (
-        "c_repuesto, stock, stock_minimo, stock_maximo, "
-        "repuesto:repuesto(descripcion, marca)"
-    )
+    # 1. Traer stock y repuestos por separado para evitar fallas por relaciones FK faltantes.
     try:
-        resp = supabase.table("stock").select(select_q).execute()
+        stock_resp = supabase.table("stock").select("c_repuesto, stock, stock_minimo, stock_maximo").execute()
+        rep_resp = supabase.table("repuesto").select("c_repuesto, descripcion, marca").execute()
     except Exception as e:  # noqa: BLE001
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error al consultar stock: {e}",
+            detail=f"Error al consultar stock o repuestos: {e}",
         )
 
+    # Indexar repuestos para acceso inmediato O(1)
+    repuestos_map = {r["c_repuesto"].strip() if isinstance(r.get("c_repuesto"), str) else r.get("c_repuesto"): r for r in (rep_resp.data or []) if r.get("c_repuesto")}
+
     proposals: List[Dict[str, Any]] = []
-    for row in resp.data or []:
+    for row in stock_resp.data or []:
         codigo = row.get("c_repuesto")
         if not codigo:
             continue
+        
+        # Normalizar clave para match exacto
+        codigo_key = codigo.strip() if isinstance(codigo, str) else codigo
 
         stock_actual = float(row.get("stock") or 0)
         stock_min = float(row.get("stock_minimo") or 0)
         stock_max = float(row.get("stock_maximo") or 0)
-        rep = row.get("repuesto") or {}
-        descripcion = rep.get("descripcion") if isinstance(rep, dict) else None
-        marca = rep.get("marca") if isinstance(rep, dict) else None
+        
+        rep = repuestos_map.get(codigo_key) or {}
+        descripcion = rep.get("descripcion")
+        marca = rep.get("marca")
 
         pred = _predict_demanda(codigo, mes, anio, km)
         demanda_ia = pred["cantidad"]

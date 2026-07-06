@@ -83,6 +83,42 @@ def _do_retrain(correr_etl: bool, forzar: bool) -> dict:
     return result
 
 
+def _upload_model_to_storage() -> None:
+    import httpx
+    from app.core.config import settings
+    from app.api.v1.endpoints.ml import _MODEL_PATH
+    if not _MODEL_PATH.exists():
+        log.warning("No se encontro model.pkl local para subir.")
+        return
+    log.info("Subiendo model.pkl actualizado a Supabase Storage...")
+    try:
+        with open(_MODEL_PATH, "rb") as f:
+            data = f.read()
+        headers = {
+            "Authorization": f"Bearer {settings.SUPABASE_KEY}",
+            "apikey": settings.SUPABASE_KEY,
+            "Content-Type": "application/octet-stream"
+        }
+        # Intentamos subir como "model-v4.pkl" en el bucket "modelos-ia"
+        resp = httpx.put(
+            f"{settings.SUPABASE_URL}/storage/v1/object/modelos-ia/model-v4.pkl",
+            headers=headers,
+            content=data,
+            timeout=30
+        )
+        if resp.status_code != 200:
+            resp = httpx.post(
+                f"{settings.SUPABASE_URL}/storage/v1/object/modelos-ia/model-v4.pkl",
+                headers=headers,
+                content=data,
+                timeout=30
+            )
+        resp.raise_for_status()
+        log.info(f"Modelo subido exitosamente a Supabase Storage ({len(data)} bytes)")
+    except Exception as e:
+        log.warning(f"No se pudo subir modelo a Storage: {e}")
+
+
 @router.post("/retrain", response_model=RetrainResponse, summary="Reentrenar el modelo IA (RF-15)")
 async def retrain_model(
     req: RetrainRequest,
@@ -106,6 +142,10 @@ async def retrain_model(
     if promovido:
         reload_model()  # hot-reload en RAM (RF-15)
         recargado = True
+        try:
+            _upload_model_to_storage()
+        except Exception as e:
+            log.warning(f"Error subiendo modelo tras reentrenamiento: {e}")
 
     metrics = result.get("metrics", {})
     wmape = metrics.get("wmape")

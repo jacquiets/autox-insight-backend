@@ -24,6 +24,7 @@ from pathlib import Path
 from typing import Optional
 
 import numpy as np
+import httpx
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
@@ -44,6 +45,36 @@ CONFIDENCE_HIGH_THRESHOLD = 0.80
 def load_model() -> None:
     """Carga el modelo ML en RAM. Llamar desde el lifespan del app."""
     global _bundle
+    if not _MODEL_PATH.exists():
+        log.info(f"model.pkl no encontrado en {_MODEL_PATH}. Intentando descargar desde Supabase Storage...")
+        from app.core.config import settings
+        if settings.SUPABASE_URL and settings.SUPABASE_KEY:
+            try:
+                _MODEL_PATH.parent.mkdir(parents=True, exist_ok=True)
+                resp = httpx.get(
+                    f"{settings.SUPABASE_URL}/storage/v1/object/modelos-ia/model-v4.pkl",
+                    headers={
+                        "Authorization": f"Bearer {settings.SUPABASE_KEY}",
+                        "apikey": settings.SUPABASE_KEY
+                    },
+                    timeout=30
+                )
+                if resp.status_code != 200:
+                    resp = httpx.get(
+                        f"{settings.SUPABASE_URL}/storage/v1/object/modelos-ia/model.pkl",
+                        headers={
+                            "Authorization": f"Bearer {settings.SUPABASE_KEY}",
+                            "apikey": settings.SUPABASE_KEY
+                        },
+                        timeout=30
+                    )
+                resp.raise_for_status()
+                with open(_MODEL_PATH, "wb") as f:
+                    f.write(resp.content)
+                log.info(f"Modelo descargado desde Supabase Storage ({len(resp.content)} bytes)")
+            except Exception as e:
+                log.warning(f"No se pudo descargar modelo desde Storage: {e}")
+
     if not _MODEL_PATH.exists():
         log.warning(f"model.pkl no encontrado en {_MODEL_PATH}. Endpoints /ml/* degradados a 503.")
         _bundle = {}
