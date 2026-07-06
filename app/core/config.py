@@ -17,7 +17,7 @@ class Settings(BaseSettings):
 
     # URL pública del frontend (para construir el redirect del email de reseteo).
     # Ejemplo: https://autox-insight-x.vercel.app
-    FRONTEND_URL: str = "http://localhost:5173"
+    FRONTEND_URL: str = "http://localhost:8080"
 
     # Orígenes permitidos (frontend)
     ALLOWED_ORIGINS: list[str] | str = [
